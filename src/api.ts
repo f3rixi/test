@@ -21,10 +21,16 @@ api.interceptors.request.use(
 );
 
 export interface User {
-  id?: number; 
+  id?: number;
   first_name: string;
   last_name: string;
   email: string;
+}
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total_pages: number;
+  page: number;
 }
 
 export const login = async (email: string, password: string): Promise<void> => {
@@ -32,27 +38,32 @@ export const login = async (email: string, password: string): Promise<void> => {
     email,
     password,
   });
-  sessionStorage.setItem("authToken", response.data.token); 
+  sessionStorage.setItem("authToken", response.data.token);
 };
 
-export const fetchUsers = async (page: number = 1): Promise<User[]> => {
+export const fetchUsers = async (
+  page: number = 1
+): Promise<PaginatedResponse<User>> => {
   const response = await api.get(`/users`, { params: { page } });
-  return response.data.data;
+  return {
+    data: response.data.data, 
+    total_pages: response.data.total_pages, 
+    page: response.data.page, 
+  };
 };
-
 export const fetchUser = async (id: number): Promise<User> => {
   const response = await api.get(`/users/${id}`);
-  return response.data.data; 
+  return response.data.data;
 };
 
 export const createUser = async (user: User): Promise<User> => {
   const response = await api.post(`/users`, user);
-  return response.data; 
+  return response.data;
 };
 
 export const updateUser = async (id: number, user: User): Promise<User> => {
   const response = await api.put(`/users/${id}`, user);
-  return response.data; 
+  return response.data;
 };
 
 export const deleteUser = async (id: number): Promise<void> => {

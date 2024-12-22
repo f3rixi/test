@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { fetchUsers, deleteUser, createUser, updateUser, User } from "../api";
+import { fetchUsers, deleteUser, User } from "../api";
 import UserDetails from "./UserDetails";
 import UserForm from "./UserForm";
 
@@ -10,9 +10,11 @@ interface UsersListProps {
 const UsersList: React.FC<UsersListProps> = ({ onLogout }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [page, setPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     loadUsers();
@@ -21,10 +23,12 @@ const UsersList: React.FC<UsersListProps> = ({ onLogout }) => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const data = await fetchUsers(page);
-      setUsers(data);
-    } catch (error) {
-      console.error("Failed to load users:", error);
+      const response = await fetchUsers(page);
+      setUsers(response.data); 
+      setTotalPages(response.total_pages); 
+      setError("");
+    } catch (err) {
+      setError("Failed to load users.");
     } finally {
       setLoading(false);
     }
@@ -33,9 +37,15 @@ const UsersList: React.FC<UsersListProps> = ({ onLogout }) => {
   const handleDelete = async (id: number) => {
     try {
       await deleteUser(id);
-      loadUsers();
-    } catch (error) {
-      console.error("Failed to delete user:", error);
+      loadUsers(); 
+    } catch {
+      setError("Failed to delete user.");
+    }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage > 0 && newPage <= totalPages) {
+      setPage(newPage);
     }
   };
 
@@ -51,7 +61,9 @@ const UsersList: React.FC<UsersListProps> = ({ onLogout }) => {
         Add User
       </button>
 
-      {loading && <p>Loading...</p>}
+      {loading && <p>Loading users...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
       {users.map((user) => (
         <div key={user.id}>
           <p>
@@ -63,6 +75,24 @@ const UsersList: React.FC<UsersListProps> = ({ onLogout }) => {
         </div>
       ))}
 
+      <div>
+        <button
+          onClick={() => handlePageChange(page - 1)}
+          disabled={page === 1}
+        >
+          Previous
+        </button>
+        <span>
+          Page {page} of {totalPages}
+        </span>
+        <button
+          onClick={() => handlePageChange(page + 1)}
+          disabled={page === totalPages}
+        >
+          Next
+        </button>
+      </div>
+
       {selectedUser && (
         <UserDetails id={selectedUser} onClose={() => setSelectedUser(null)} />
       )}
@@ -70,10 +100,7 @@ const UsersList: React.FC<UsersListProps> = ({ onLogout }) => {
         <UserForm
           user={editingUser}
           onClose={() => setEditingUser(null)}
-          onSuccess={() => {
-            loadUsers();
-            setEditingUser(null);
-          }}
+          onSuccess={loadUsers}
         />
       )}
     </div>
